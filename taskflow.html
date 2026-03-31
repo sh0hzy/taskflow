@@ -1,0 +1,1645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaskFlow — Daily Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0d0f;
+    --bg2: #141417;
+    --bg3: #1c1c20;
+    --bg4: #252529;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #f0ede8;
+    --text2: #9b9892;
+    --text3: #5e5c59;
+    --accent: #c8fb4b;
+    --accent2: #a8e030;
+    --accent-dim: rgba(200,251,75,0.12);
+    --accent-dim2: rgba(200,251,75,0.06);
+    --green: #4bfb9a;
+    --green-dim: rgba(75,251,154,0.1);
+    --blue: #4b9cfb;
+    --blue-dim: rgba(75,156,251,0.1);
+    --red: #fb4b4b;
+    --red-dim: rgba(251,75,75,0.1);
+    --amber: #fbbd4b;
+    --amber-dim: rgba(251,189,75,0.1);
+    --purple: #9b4bfb;
+    --purple-dim: rgba(155,75,251,0.1);
+    --whatsapp: #25d366;
+    --whatsapp-dim: rgba(37,211,102,0.12);
+    --radius: 14px;
+    --radius-sm: 8px;
+    --radius-lg: 20px;
+    --transition: 0.2s cubic-bezier(0.4,0,0.2,1);
+    --font-head: 'Syne', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ───── LAYOUT ───── */
+  .app {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    grid-template-rows: auto 1fr;
+    min-height: 100vh;
+  }
+
+  @media(max-width:768px) {
+    .app { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; }
+  }
+
+  /* ───── TOPBAR ───── */
+  .topbar {
+    grid-column: 1/-1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 28px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: var(--font-head);
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .logo-dot {
+    width: 10px; height: 10px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 12px var(--accent);
+  }
+
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .date-badge {
+    font-size: 13px;
+    color: var(--text2);
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 14px;
+  }
+
+  .theme-btn {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--border2);
+    background: var(--bg3);
+    color: var(--text2);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    transition: var(--transition);
+  }
+  .theme-btn:hover { background: var(--bg4); color: var(--text); }
+
+  /* ───── SIDEBAR ───── */
+  .sidebar {
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    padding: 24px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    position: sticky;
+    top: 61px;
+    height: calc(100vh - 61px);
+    overflow-y: auto;
+  }
+
+  @media(max-width:768px) {
+    .sidebar {
+      position: static;
+      height: auto;
+      flex-direction: row;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 10px 16px;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+      gap: 6px;
+    }
+  }
+
+  .nav-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text3);
+    padding: 4px 12px 10px;
+    margin-top: 8px;
+  }
+
+  @media(max-width:768px) { .nav-label { display: none; } }
+
+  .nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: transparent;
+    color: var(--text2);
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 400;
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+    text-align: left;
+    width: 100%;
+  }
+
+  @media(max-width:768px) { .nav-btn { width: auto; padding: 8px 14px; border-radius: 20px; } }
+
+  .nav-btn .icon { font-size: 16px; flex-shrink: 0; }
+  .nav-btn:hover { background: var(--bg3); color: var(--text); }
+  .nav-btn.active {
+    background: var(--accent-dim);
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  .nav-badge {
+    margin-left: auto;
+    background: var(--accent-dim);
+    color: var(--accent);
+    border-radius: 20px;
+    font-size: 11px;
+    padding: 1px 7px;
+    font-weight: 600;
+  }
+
+  /* ───── MAIN ───── */
+  .main {
+    padding: 32px 36px;
+    overflow-y: auto;
+  }
+
+  @media(max-width:768px) { .main { padding: 20px 16px; } }
+
+  .view { display: none; animation: fadeIn 0.25s ease; }
+  .view.active { display: block; }
+
+  @keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+
+  /* ───── SECTION HEADER ───── */
+  .section-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .section-title {
+    font-family: var(--font-head);
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+  }
+
+  .section-subtitle {
+    font-size: 13px;
+    color: var(--text2);
+    margin-top: 4px;
+  }
+
+  /* ───── CARDS ───── */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    transition: var(--transition);
+  }
+
+  .card:hover { border-color: var(--border2); }
+
+  /* ───── INPUT AREA ───── */
+  .input-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    min-width: 180px;
+  }
+
+  .input-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text2);
+    letter-spacing: 0.03em;
+  }
+
+  .text-input {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    outline: none;
+    transition: var(--transition);
+    width: 100%;
+  }
+
+  .text-input:focus {
+    border-color: var(--accent);
+    background: var(--bg4);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+  }
+
+  .text-input::placeholder { color: var(--text3); }
+
+  select.text-input {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235e5c59' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+    cursor: pointer;
+  }
+
+  select.text-input option { background: var(--bg3); }
+
+  textarea.text-input {
+    resize: vertical;
+    min-height: 80px;
+    line-height: 1.5;
+  }
+
+  /* ───── BUTTONS ───── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    border: none;
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #0d0d0f;
+  }
+  .btn-primary:hover { background: var(--accent2); transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text2);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { background: var(--bg3); color: var(--text); border-color: var(--border2); }
+
+  .btn-whatsapp {
+    background: var(--whatsapp);
+    color: #fff;
+  }
+  .btn-whatsapp:hover { background: #20bd5c; transform: translateY(-1px); }
+
+  .btn-danger {
+    background: transparent;
+    color: var(--text3);
+    border: none;
+    padding: 6px 8px;
+  }
+  .btn-danger:hover { color: var(--red); background: var(--red-dim); border-radius: var(--radius-sm); }
+
+  .btn-sm { padding: 6px 14px; font-size: 13px; }
+
+  /* ───── TASK LIST ───── */
+  .tasks-grid { display: flex; flex-direction: column; gap: 8px; }
+
+  .task-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    transition: border-color var(--transition), background var(--transition), opacity var(--transition), transform 0.15s ease;
+    animation: slideIn 0.25s ease;
+    cursor: default;
+    user-select: none;
+  }
+
+  @keyframes slideIn { from { opacity:0; transform: translateX(-8px); } to { opacity:1; transform: translateX(0); } }
+
+  .task-item:hover { border-color: var(--border2); background: var(--bg3); }
+  .task-item.done { opacity: 0.5; }
+  .task-item.done .task-text { text-decoration: line-through; color: var(--text3); }
+
+  .task-item.dragging {
+    opacity: 0.4;
+    transform: scale(0.98);
+    border-color: var(--accent) !important;
+    border-style: dashed !important;
+  }
+
+  .task-item.drag-over {
+    border-color: var(--accent) !important;
+    background: var(--accent-dim2) !important;
+    transform: translateY(-2px);
+  }
+
+  .drag-handle {
+    cursor: grab;
+    color: var(--text3);
+    font-size: 14px;
+    flex-shrink: 0;
+    padding: 2px 0;
+    line-height: 1;
+    transition: color var(--transition);
+    touch-action: none;
+  }
+  .drag-handle:hover { color: var(--text2); }
+  .drag-handle:active { cursor: grabbing; }
+
+  .task-check {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    border: 2px solid var(--border2);
+    background: transparent;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: var(--transition);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+  }
+
+  .task-check:hover { border-color: var(--accent); background: var(--accent-dim); }
+  .task-check.checked { background: var(--accent); border-color: var(--accent); color: #0d0d0f; }
+
+  .task-content { flex: 1; min-width: 0; }
+  .task-text { font-size: 14px; color: var(--text); line-height: 1.4; }
+
+  .task-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 3px;
+    flex-wrap: wrap;
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 20px;
+    letter-spacing: 0.02em;
+  }
+
+  .tag-work { background: var(--blue-dim); color: var(--blue); }
+  .tag-personal { background: var(--purple-dim); color: var(--purple); }
+  .tag-health { background: var(--green-dim); color: var(--green); }
+  .tag-urgent { background: var(--red-dim); color: var(--red); }
+  .tag-other { background: var(--bg4); color: var(--text2); }
+
+  .priority-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .p-high { background: var(--red); }
+  .p-medium { background: var(--amber); }
+  .p-low { background: var(--green); }
+
+  .task-actions { display: flex; gap: 4px; flex-shrink: 0; }
+
+  /* ───── STATS BAR ───── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    text-align: center;
+  }
+
+  .stat-num {
+    font-family: var(--font-head);
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .stat-label { font-size: 12px; color: var(--text2); }
+  .stat-accent { color: var(--accent); }
+  .stat-green { color: var(--green); }
+  .stat-blue { color: var(--blue); }
+  .stat-amber { color: var(--amber); }
+
+  /* ───── PROGRESS BAR ───── */
+  .progress-wrap { margin-bottom: 28px; }
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--text2);
+    margin-bottom: 8px;
+  }
+  .progress-bar {
+    height: 6px;
+    background: var(--bg4);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+    transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  /* ───── WHATSAPP SECTION ───── */
+  .wa-panel {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 22px;
+    margin-top: 24px;
+  }
+
+  .wa-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .wa-icon {
+    width: 40px; height: 40px;
+    background: var(--whatsapp-dim);
+    border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+
+  .wa-preview {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    font-size: 13px;
+    color: var(--text2);
+    font-family: monospace;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 220px;
+    overflow-y: auto;
+    margin-bottom: 16px;
+  }
+
+  .wa-preview strong { color: var(--accent); font-family: var(--font-body); }
+
+  .wa-input-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+  }
+
+  /* ───── GOALS ───── */
+  .goals-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+
+  .goal-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .goal-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+
+  .goal-card.cat-work::before { background: var(--blue); }
+  .goal-card.cat-personal::before { background: var(--purple); }
+  .goal-card.cat-health::before { background: var(--green); }
+  .goal-card.cat-finance::before { background: var(--amber); }
+  .goal-card.cat-other::before { background: var(--text3); }
+
+  .goal-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+
+  .goal-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .goal-title {
+    font-family: var(--font-head);
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .goal-desc { font-size: 13px; color: var(--text2); line-height: 1.5; margin-bottom: 14px; }
+
+  .goal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .goal-deadline {
+    font-size: 12px;
+    color: var(--text3);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  /* ───── EMPTY STATE ───── */
+  .empty {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--text3);
+  }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
+  .empty-text { font-size: 14px; }
+
+  /* ───── MONTHLY VIEW ───── */
+  .month-group { margin-bottom: 28px; }
+  .month-group-title {
+    font-family: var(--font-head);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .month-group-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ───── PHONE PREVIEW (mobile wa) ───── */
+  .wa-phone-preview {
+    background: #111b21;
+    border-radius: 16px;
+    padding: 16px;
+    max-width: 340px;
+    margin: 16px auto 0;
+    font-family: var(--font-body);
+  }
+
+  .wa-phone-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    margin-bottom: 14px;
+  }
+
+  .wa-phone-avatar {
+    width: 36px; height: 36px;
+    background: var(--whatsapp);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+
+  .wa-phone-name { font-size: 14px; font-weight: 500; color: #e9edef; }
+  .wa-phone-status { font-size: 12px; color: #8696a0; }
+
+  .wa-bubble-edit {
+    display: block;
+    width: 100%;
+    background: #005c4b;
+    border: 1px solid transparent;
+    border-radius: 10px 10px 2px 10px;
+    padding: 10px 28px 10px 12px;
+    font-size: 13px;
+    font-family: var(--font-body);
+    color: #e9edef;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+    resize: vertical;
+    min-height: 120px;
+    outline: none;
+    transition: border-color 0.2s ease;
+    cursor: text;
+  }
+  .wa-bubble-edit:focus {
+    border-color: rgba(37,211,102,0.5);
+  }
+
+  .wa-bubble-time {
+    text-align: right;
+    font-size: 11px;
+    color: #8696a0;
+    margin-top: 4px;
+  }
+
+  /* ───── LIGHT MODE ───── */
+  body.light {
+    --bg: #f5f4f0;
+    --bg2: #ffffff;
+    --bg3: #f0ede8;
+    --bg4: #e8e5e0;
+    --border: rgba(0,0,0,0.07);
+    --border2: rgba(0,0,0,0.14);
+    --text: #0d0d0f;
+    --text2: #6b6966;
+    --text3: #9b9892;
+    --accent-dim: rgba(100,160,0,0.1);
+    --accent-dim2: rgba(100,160,0,0.05);
+    --accent: #5a8f00;
+    --accent2: #4a7a00;
+    --green-dim: rgba(0,140,70,0.08);
+    --blue-dim: rgba(0,80,200,0.08);
+    --red-dim: rgba(200,40,40,0.08);
+    --amber-dim: rgba(180,130,0,0.08);
+    --purple-dim: rgba(120,50,200,0.08);
+    --whatsapp-dim: rgba(37,211,102,0.1);
+  }
+
+  /* ───── TOAST ───── */
+  .toast {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 14px 20px;
+    font-size: 14px;
+    color: var(--text);
+    z-index: 999;
+    animation: toastIn 0.3s ease;
+    max-width: 320px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  @keyframes toastIn { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
+  @keyframes toastOut { from { opacity:1; transform: translateY(0); } to { opacity:0; transform: translateY(10px); } }
+
+  /* ───── FILTER ROW ───── */
+  .filter-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .filter-chip {
+    padding: 5px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text2);
+    font-size: 13px;
+    font-family: var(--font-body);
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  .filter-chip:hover { border-color: var(--border2); color: var(--text); }
+  .filter-chip.active { background: var(--accent-dim); color: var(--accent); border-color: transparent; font-weight: 500; }
+
+  /* ───── SCROLLBAR ───── */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 3px; }
+
+  /* ───── MOBILE ADJUSTMENTS ───── */
+  @media(max-width:480px) {
+    .section-title { font-size: 22px; }
+    .main { padding: 16px 14px; }
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    .goals-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ─── TOPBAR ─── -->
+  <header class="topbar">
+    <div class="logo">
+      <div class="logo-dot"></div>
+      TaskFlow
+    </div>
+    <div class="topbar-right">
+      <span class="date-badge" id="todayDate"></span>
+      <button class="theme-btn" onclick="toggleTheme()" title="Toggle theme">☀</button>
+    </div>
+  </header>
+
+  <!-- ─── SIDEBAR ─── -->
+  <nav class="sidebar">
+    <div class="nav-label">Menu</div>
+    <button class="nav-btn active" onclick="showView('daily', this)">
+      <span class="icon">📋</span> Daily Tasks
+      <span class="nav-badge" id="dailyBadge">0</span>
+    </button>
+    <button class="nav-btn" onclick="showView('monthly', this)">
+      <span class="icon">📅</span> Monthly Tasks
+      <span class="nav-badge" id="monthlyBadge" style="display:none"></span>
+    </button>
+    <button class="nav-btn" onclick="showView('goals', this)">
+      <span class="icon">🎯</span> Goals
+      <span class="nav-badge" id="goalsBadge" style="display:none"></span>
+    </button>
+    <div class="nav-label" style="margin-top:auto">Send</div>
+    <button class="nav-btn" onclick="showView('whatsapp', this)">
+      <span class="icon">💬</span> WhatsApp
+    </button>
+  </nav>
+
+  <!-- ─── MAIN ─── -->
+  <main class="main">
+
+    <!-- ══ DAILY TASKS ══ -->
+    <div class="view active" id="view-daily">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Today's Tasks</div>
+          <div class="section-subtitle" id="dailySubtitle">Focus on what matters today</div>
+        </div>
+        <button class="btn btn-whatsapp btn-sm" onclick="showView('whatsapp', null)">
+          📲 Send to WhatsApp
+        </button>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-num stat-accent" id="statTotal">0</div>
+          <div class="stat-label">Total</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num stat-green" id="statDone">0</div>
+          <div class="stat-label">Done</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num stat-amber" id="statPending">0</div>
+          <div class="stat-label">Pending</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num stat-blue" id="statPct">0%</div>
+          <div class="stat-label">Progress</div>
+        </div>
+      </div>
+
+      <!-- Progress -->
+      <div class="progress-wrap">
+        <div class="progress-label">
+          <span>Daily progress</span>
+          <span id="progressLabel">0 of 0 completed</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill" style="width:0%"></div>
+        </div>
+      </div>
+
+      <!-- Add task -->
+      <div class="input-card">
+        <div class="input-row">
+          <div class="input-group" style="flex:3; min-width:200px">
+            <label class="input-label">Task description</label>
+            <input class="text-input" type="text" id="dailyInput" placeholder="What needs to be done today?" onkeydown="if(event.key==='Enter') addDailyTask()">
+          </div>
+          <div class="input-group" style="flex:1">
+            <label class="input-label">Category</label>
+            <select class="text-input" id="dailyCat">
+              <option value="work">💼 Work</option>
+              <option value="personal">✨ Personal</option>
+              <option value="health">💪 Health</option>
+              <option value="urgent">🔥 Urgent</option>
+              <option value="other">📌 Other</option>
+            </select>
+          </div>
+          <div class="input-group" style="flex:1; min-width:120px">
+            <label class="input-label">Priority</label>
+            <select class="text-input" id="dailyPriority">
+              <option value="high">🔴 High</option>
+              <option value="medium" selected>🟡 Medium</option>
+              <option value="low">🟢 Low</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" style="margin-bottom:0; flex-shrink:0" onclick="addDailyTask()">＋ Add</button>
+        </div>
+      </div>
+
+      <!-- Filter -->
+      <div class="filter-row">
+        <button class="filter-chip active" onclick="filterDaily('all', this)">All</button>
+        <button class="filter-chip" onclick="filterDaily('pending', this)">Pending</button>
+        <button class="filter-chip" onclick="filterDaily('done', this)">Done</button>
+        <button class="filter-chip" onclick="filterDaily('work', this)">Work</button>
+        <button class="filter-chip" onclick="filterDaily('personal', this)">Personal</button>
+        <button class="filter-chip" onclick="filterDaily('health', this)">Health</button>
+        <button class="filter-chip" onclick="filterDaily('urgent', this)">Urgent</button>
+      </div>
+
+      <!-- Task list -->
+      <div class="tasks-grid" id="dailyList"></div>
+    </div>
+
+    <!-- ══ MONTHLY TASKS ══ -->
+    <div class="view" id="view-monthly">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Monthly Tasks</div>
+          <div class="section-subtitle">Plan the bigger picture</div>
+        </div>
+      </div>
+
+      <!-- Add task -->
+      <div class="input-card">
+        <div class="input-row">
+          <div class="input-group" style="flex:3; min-width:200px">
+            <label class="input-label">Task description</label>
+            <input class="text-input" type="text" id="monthlyInput" placeholder="What needs to happen this month?" onkeydown="if(event.key==='Enter') addMonthlyTask()">
+          </div>
+          <div class="input-group">
+            <label class="input-label">Week</label>
+            <select class="text-input" id="monthlyWeek">
+              <option value="Week 1">Week 1</option>
+              <option value="Week 2">Week 2</option>
+              <option value="Week 3">Week 3</option>
+              <option value="Week 4">Week 4</option>
+            </select>
+          </div>
+          <div class="input-group">
+            <label class="input-label">Category</label>
+            <select class="text-input" id="monthlyCat">
+              <option value="work">💼 Work</option>
+              <option value="personal">✨ Personal</option>
+              <option value="health">💪 Health</option>
+              <option value="urgent">🔥 Urgent</option>
+              <option value="other">📌 Other</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" style="flex-shrink:0" onclick="addMonthlyTask()">＋ Add</button>
+        </div>
+      </div>
+
+      <div id="monthlyList"></div>
+    </div>
+
+    <!-- ══ GOALS ══ -->
+    <div class="view" id="view-goals">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Goals & Milestones</div>
+          <div class="section-subtitle">Your long-term ambitions</div>
+        </div>
+      </div>
+
+      <!-- Add goal -->
+      <div class="input-card" style="margin-bottom:28px">
+        <div class="input-row" style="margin-bottom:12px">
+          <div class="input-group" style="flex:3">
+            <label class="input-label">Goal title</label>
+            <input class="text-input" type="text" id="goalTitle" placeholder="What do you want to achieve?">
+          </div>
+          <div class="input-group" style="flex:1">
+            <label class="input-label">Category</label>
+            <select class="text-input" id="goalCat">
+              <option value="work">💼 Work</option>
+              <option value="personal">✨ Personal</option>
+              <option value="health">💪 Health</option>
+              <option value="finance">💰 Finance</option>
+              <option value="other">📌 Other</option>
+            </select>
+          </div>
+          <div class="input-group" style="flex:1">
+            <label class="input-label">Deadline</label>
+            <input class="text-input" type="date" id="goalDeadline">
+          </div>
+        </div>
+        <div class="input-row">
+          <div class="input-group" style="flex:1">
+            <label class="input-label">Description (optional)</label>
+            <input class="text-input" type="text" id="goalDesc" placeholder="Notes, milestones, or why it matters...">
+          </div>
+          <button class="btn btn-primary" style="flex-shrink:0" onclick="addGoal()">＋ Add Goal</button>
+        </div>
+      </div>
+
+      <div class="goals-grid" id="goalsList"></div>
+    </div>
+
+    <!-- ══ WHATSAPP ══ -->
+    <div class="view" id="view-whatsapp">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Send to WhatsApp</div>
+          <div class="section-subtitle">Share your daily tasks with any contact or group</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <p style="font-size:14px; color:var(--text2); line-height:1.7; margin-bottom:14px">
+          Enter a WhatsApp phone number or use the "Click to Chat" link to send your task list directly. The message is pre-formatted and ready to send.
+        </p>
+        <div class="wa-input-row" style="margin-bottom:10px">
+          <div class="input-group" style="max-width:200px">
+            <label class="input-label">Country code</label>
+            <input class="text-input" type="text" id="waCountry" placeholder="+1" value="+1">
+          </div>
+          <div class="input-group" style="flex:1">
+            <label class="input-label">Phone number (digits only)</label>
+            <input class="text-input" type="tel" id="waPhone" placeholder="5551234567">
+          </div>
+        </div>
+        <div style="font-size:12px; color:var(--text3); margin-bottom:16px">
+          ℹ️ Include country code without + or spaces. Example: for US +1 (555) 123-4567, enter country +1 and number 5551234567
+        </div>
+
+        <!-- Message options -->
+        <div class="input-row" style="margin-bottom:16px">
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:14px; color:var(--text2)">
+            <input type="checkbox" id="waIncludeDone" checked> Include completed tasks
+          </label>
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:14px; color:var(--text2)">
+            <input type="checkbox" id="waIncludeMonthly"> Include monthly summary
+          </label>
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:14px; color:var(--text2)">
+            <input type="checkbox" id="waIncludeGoals"> Include goals
+          </label>
+        </div>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap">
+          <button class="btn btn-whatsapp" onclick="sendToWhatsApp()">
+            📲 Open in WhatsApp
+          </button>
+          <button class="btn btn-ghost btn-sm" onclick="copyWAMessage()">📋 Copy message</button>
+          <button class="btn btn-ghost btn-sm" onclick="refreshWAPreview()">🔄 Refresh preview</button>
+        </div>
+      </div>
+
+      <!-- Preview -->
+      <div class="wa-panel">
+        <div class="wa-header">
+          <div class="wa-icon">📱</div>
+          <div>
+            <div style="font-weight:500; font-size:15px">Message Preview</div>
+            <div style="font-size:12px; color:var(--text2)">How your message will look in WhatsApp</div>
+          </div>
+        </div>
+
+        <div class="wa-phone-preview">
+          <div class="wa-phone-bar">
+            <div class="wa-phone-avatar">✓</div>
+            <div>
+              <div class="wa-phone-name">My Tasks</div>
+              <div class="wa-phone-status">online</div>
+            </div>
+          </div>
+          <div style="position:relative">
+            <textarea id="waBubble" class="wa-bubble-edit" spellcheck="false">Loading...</textarea>
+            <div style="position:absolute;top:6px;right:8px;font-size:10px;color:rgba(255,255,255,0.3);pointer-events:none">✎ editable</div>
+          </div>
+          <div class="wa-bubble-time" id="waBubbleTime"></div>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn btn-ghost btn-sm" onclick="resetWAMessage()" style="font-size:12px;border-color:rgba(255,255,255,0.1);color:#8696a0">↺ Reset to auto</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ─── STATE ───
+let state = JSON.parse(localStorage.getItem('taskflow_v2') || '{}');
+if(!state.daily) state.daily = [];
+if(!state.monthly) state.monthly = [];
+if(!state.goals) state.goals = [];
+
+let currentDailyFilter = 'all';
+const emojis = { work:'💼', personal:'✨', health:'💪', urgent:'🔥', other:'📌', finance:'💰' };
+const catLabel = { work:'Work', personal:'Personal', health:'Health', urgent:'Urgent', other:'Other', finance:'Finance' };
+
+function save() { localStorage.setItem('taskflow_v2', JSON.stringify(state)); }
+
+// ─── INIT ───
+(function init(){
+  const d = new Date();
+  document.getElementById('todayDate').textContent = d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+  document.getElementById('goalDeadline').min = d.toISOString().split('T')[0];
+
+  // Load saved theme
+  if(localStorage.getItem('tf_theme') === 'light') document.body.classList.add('light');
+
+  renderAll();
+})();
+
+// ─── THEME ───
+function toggleTheme() {
+  document.body.classList.toggle('light');
+  localStorage.setItem('tf_theme', document.body.classList.contains('light') ? 'light' : 'dark');
+  document.querySelector('.theme-btn').textContent = document.body.classList.contains('light') ? '🌙' : '☀';
+}
+
+// ─── NAVIGATION ───
+function showView(name, btn) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  if(btn) btn.classList.add('active');
+  if(name === 'whatsapp') refreshWAPreview();
+}
+
+// ─── RENDER ALL ───
+function renderAll() {
+  renderDaily();
+  renderMonthly();
+  renderGoals();
+  updateBadges();
+}
+
+// ─── BADGES ───
+function updateBadges() {
+  const pending = state.daily.filter(t => !t.done).length;
+  const el = document.getElementById('dailyBadge');
+  el.textContent = pending;
+  el.style.display = pending ? '' : 'none';
+
+  const mp = state.monthly.filter(t => !t.done).length;
+  const mel = document.getElementById('monthlyBadge');
+  if(mp > 0) { mel.textContent = mp; mel.style.display = ''; } else { mel.style.display = 'none'; }
+
+  const gp = state.goals.length;
+  const gel = document.getElementById('goalsBadge');
+  if(gp > 0) { gel.textContent = gp; gel.style.display = ''; } else { gel.style.display = 'none'; }
+}
+
+// ─── DAILY TASKS ───
+function addDailyTask() {
+  const val = document.getElementById('dailyInput').value.trim();
+  if(!val) return;
+  state.daily.unshift({
+    id: Date.now(),
+    text: val,
+    cat: document.getElementById('dailyCat').value,
+    priority: document.getElementById('dailyPriority').value,
+    done: false,
+    ts: new Date().toISOString()
+  });
+  document.getElementById('dailyInput').value = '';
+  save();
+  renderAll();
+  showToast('✅ Task added!');
+}
+
+function toggleDailyTask(id) {
+  const t = state.daily.find(t => t.id === id);
+  if(t) { t.done = !t.done; save(); renderAll(); }
+}
+
+function deleteTask(id, arr) {
+  state[arr] = state[arr].filter(t => t.id !== id);
+  save(); renderAll();
+}
+
+function filterDaily(f, btn) {
+  currentDailyFilter = f;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  renderDaily();
+}
+
+function renderDaily() {
+  let tasks = state.daily;
+  if(currentDailyFilter === 'pending') tasks = tasks.filter(t => !t.done);
+  else if(currentDailyFilter === 'done') tasks = tasks.filter(t => t.done);
+  else if(['work','personal','health','urgent','other'].includes(currentDailyFilter))
+    tasks = tasks.filter(t => t.cat === currentDailyFilter);
+
+  const total = state.daily.length;
+  const done = state.daily.filter(t => t.done).length;
+  const pct = total ? Math.round(done/total*100) : 0;
+
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statDone').textContent = done;
+  document.getElementById('statPending').textContent = total - done;
+  document.getElementById('statPct').textContent = pct + '%';
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = `${done} of ${total} completed`;
+
+  const d = new Date();
+  document.getElementById('dailySubtitle').textContent = done === total && total > 0
+    ? `🎉 All ${total} tasks complete! Great day!`
+    : `${total - done} pending • ${d.toLocaleDateString('en-US',{weekday:'long'})}`;
+
+  const list = document.getElementById('dailyList');
+  if(!tasks.length) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">${currentDailyFilter==='all'?'No tasks yet — add something above!':'No tasks match this filter'}</div></div>`;
+    return;
+  }
+
+  const isDraggable = currentDailyFilter === 'all';
+  list.innerHTML = tasks.map(t => `
+    <div class="task-item ${t.done ? 'done' : ''}" data-id="${t.id}" ${isDraggable ? 'draggable="true"' : ''}>
+      ${isDraggable ? `<div class="drag-handle" title="Drag to reorder">⋮⋮</div>` : ''}
+      <div class="task-check ${t.done ? 'checked' : ''}" onclick="toggleDailyTask(${t.id})">
+        ${t.done ? '✓' : ''}
+      </div>
+      <div class="task-content">
+        <div class="task-text">${escHtml(t.text)}</div>
+        <div class="task-meta">
+          <span class="tag tag-${t.cat}">${emojis[t.cat]} ${catLabel[t.cat]}</span>
+          <span class="priority-dot p-${t.priority}" title="${t.priority} priority"></span>
+          <span style="font-size:11px; color:var(--text3)">${t.priority}</span>
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="btn btn-danger" onclick="deleteTask(${t.id},'daily')" title="Delete">✕</button>
+      </div>
+    </div>
+  `).join('');
+
+  if(isDraggable) initDragDaily(list, tasks);
+}
+
+// ─── MONTHLY TASKS ───
+function addMonthlyTask() {
+  const val = document.getElementById('monthlyInput').value.trim();
+  if(!val) return;
+  state.monthly.unshift({
+    id: Date.now(),
+    text: val,
+    week: document.getElementById('monthlyWeek').value,
+    cat: document.getElementById('monthlyCat').value,
+    done: false,
+    ts: new Date().toISOString()
+  });
+  document.getElementById('monthlyInput').value = '';
+  save(); renderAll();
+  showToast('📅 Monthly task added!');
+}
+
+function renderMonthly() {
+  const list = document.getElementById('monthlyList');
+  if(!state.monthly.length) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">📅</div><div class="empty-text">No monthly tasks yet — plan ahead!</div></div>`;
+    return;
+  }
+  const weeks = ['Week 1','Week 2','Week 3','Week 4'];
+  let html = '';
+  weeks.forEach(wk => {
+    const tasks = state.monthly.filter(t => t.week === wk);
+    if(!tasks.length) return;
+    html += `<div class="month-group">
+      <div class="month-group-title">${wk}</div>
+      <div class="tasks-grid" data-week="${wk}">
+        ${tasks.map(t => `
+          <div class="task-item ${t.done ? 'done' : ''}" data-id="${t.id}" draggable="true">
+            <div class="drag-handle" title="Drag to reorder">⋮⋮</div>
+            <div class="task-check ${t.done ? 'checked' : ''}" onclick="toggleMonthly(${t.id})">${t.done ? '✓' : ''}</div>
+            <div class="task-content">
+              <div class="task-text">${escHtml(t.text)}</div>
+              <div class="task-meta">
+                <span class="tag tag-${t.cat}">${emojis[t.cat]} ${catLabel[t.cat]}</span>
+              </div>
+            </div>
+            <div class="task-actions">
+              <button class="btn btn-danger" onclick="deleteTask(${t.id},'monthly')" title="Delete">✕</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+  });
+  list.innerHTML = html;
+
+  // Init drag for each week group
+  document.querySelectorAll('#monthlyList .tasks-grid').forEach(grid => {
+    const wk = grid.dataset.week;
+    initDragMonthly(grid, wk);
+  });
+}
+
+function toggleMonthly(id) {
+  const t = state.monthly.find(t => t.id === id);
+  if(t) { t.done = !t.done; save(); renderMonthly(); updateBadges(); }
+}
+
+// ─── GOALS ───
+function addGoal() {
+  const title = document.getElementById('goalTitle').value.trim();
+  if(!title) return;
+  state.goals.unshift({
+    id: Date.now(),
+    title,
+    desc: document.getElementById('goalDesc').value.trim(),
+    cat: document.getElementById('goalCat').value,
+    deadline: document.getElementById('goalDeadline').value,
+    done: false,
+    ts: new Date().toISOString()
+  });
+  document.getElementById('goalTitle').value = '';
+  document.getElementById('goalDesc').value = '';
+  save(); renderAll();
+  showToast('🎯 Goal added!');
+}
+
+function toggleGoal(id) {
+  const g = state.goals.find(g => g.id === id);
+  if(g) { g.done = !g.done; save(); renderGoals(); updateBadges(); }
+}
+
+function deleteGoal(id) {
+  state.goals = state.goals.filter(g => g.id !== id);
+  save(); renderGoals(); updateBadges();
+}
+
+function renderGoals() {
+  const list = document.getElementById('goalsList');
+  if(!state.goals.length) {
+    list.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="empty-icon">🎯</div><div class="empty-text">No goals yet — set your first one!</div></div>`;
+    return;
+  }
+  list.innerHTML = state.goals.map(g => {
+    const dlStr = g.deadline ? new Date(g.deadline + 'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+    const isOverdue = g.deadline && !g.done && new Date(g.deadline) < new Date();
+    return `
+    <div class="goal-card cat-${g.cat} ${g.done ? 'done' : ''}">
+      <div class="goal-top">
+        <div>
+          <div class="tag tag-${g.cat}" style="margin-bottom:8px">${emojis[g.cat]} ${catLabel[g.cat]}</div>
+          <div class="goal-title" style="${g.done ? 'text-decoration:line-through; opacity:0.5' : ''}">${escHtml(g.title)}</div>
+        </div>
+        <div class="task-actions">
+          <button class="btn btn-danger" onclick="deleteGoal(${g.id})">✕</button>
+        </div>
+      </div>
+      ${g.desc ? `<div class="goal-desc">${escHtml(g.desc)}</div>` : ''}
+      <div class="goal-footer">
+        <div>
+          ${dlStr ? `<div class="goal-deadline" style="${isOverdue?'color:var(--red)':''}">
+            ${isOverdue ? '⚠️' : '📆'} ${dlStr}${isOverdue ? ' — overdue' : ''}
+          </div>` : '<div class="goal-deadline">No deadline set</div>'}
+        </div>
+        <button class="btn ${g.done ? 'btn-ghost' : 'btn-primary'} btn-sm" onclick="toggleGoal(${g.id})">
+          ${g.done ? '↩ Reopen' : '✓ Complete'}
+        </button>
+      </div>
+    </div>
+    `;
+  }).join('');
+}
+
+// ─── WHATSAPP ───
+function buildWAMessage() {
+  const now = new Date();
+  const incDone = document.getElementById('waIncludeDone').checked;
+  const incMonthly = document.getElementById('waIncludeMonthly').checked;
+  const incGoals = document.getElementById('waIncludeGoals').checked;
+
+  let msg = `📋 *MY DAILY TASKS*\n`;
+  msg += `📅 ${now.toLocaleDateString('en-US',{weekday:'long', year:'numeric', month:'long', day:'numeric'})}\n`;
+  msg += `━━━━━━━━━━━━━━━\n\n`;
+
+  const pending = state.daily.filter(t => !t.done);
+  const done = state.daily.filter(t => t.done);
+  const total = state.daily.length;
+
+  if(!total) {
+    msg += `_No tasks for today_\n`;
+  } else {
+    msg += `*📌 Pending (${pending.length}/${total})*\n`;
+    if(pending.length) {
+      pending.forEach(t => {
+        const p = t.priority === 'high' ? '🔴' : t.priority === 'medium' ? '🟡' : '🟢';
+        msg += `${p} ${t.text} _(${catLabel[t.cat]})_\n`;
+      });
+    } else {
+      msg += `_All tasks done!_ 🎉\n`;
+    }
+    if(incDone && done.length) {
+      msg += `\n*✅ Completed (${done.length})*\n`;
+      done.forEach(t => { msg += `☑️ ~${t.text}~\n`; });
+    }
+    msg += `\n📊 Progress: ${done.length}/${total} (${Math.round(done.length/total*100)}%)\n`;
+  }
+
+  if(incMonthly) {
+    const mp = state.monthly.filter(t => !t.done);
+    if(mp.length) {
+      msg += `\n━━━━━━━━━━━━━━━\n*📅 THIS MONTH (${mp.length} pending)*\n`;
+      const byWeek = {};
+      mp.forEach(t => { if(!byWeek[t.week]) byWeek[t.week] = []; byWeek[t.week].push(t); });
+      Object.keys(byWeek).forEach(wk => {
+        msg += `\n*${wk}:*\n`;
+        byWeek[wk].forEach(t => { msg += `• ${t.text}\n`; });
+      });
+    }
+  }
+
+  if(incGoals) {
+    const ag = state.goals.filter(g => !g.done);
+    if(ag.length) {
+      msg += `\n━━━━━━━━━━━━━━━\n*🎯 ACTIVE GOALS (${ag.length})*\n`;
+      ag.forEach(g => {
+        const dl = g.deadline ? ` 📆 ${new Date(g.deadline+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})}` : '';
+        msg += `• *${g.title}*${dl}\n`;
+      });
+    }
+  }
+
+  msg += `\n━━━━━━━━━━━━━━━\n_Sent via TaskFlow_`;
+  return msg;
+}
+
+function refreshWAPreview() {
+  const msg = buildWAMessage();
+  const now = new Date();
+  const t = now.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'});
+  document.getElementById('waBubble').value = msg;
+  document.getElementById('waBubbleTime').textContent = t + ' ✓✓';
+}
+
+function resetWAMessage() {
+  refreshWAPreview();
+  showToast('↺ Message reset to auto-generated');
+}
+
+function sendToWhatsApp() {
+  const country = document.getElementById('waCountry').value.replace(/\D/g, '');
+  const phone = document.getElementById('waPhone').value.replace(/\D/g, '');
+  const msg = document.getElementById('waBubble').value;
+  const encoded = encodeURIComponent(msg);
+  const url = phone
+    ? `https://wa.me/${country}${phone}?text=${encoded}`
+    : `https://wa.me/?text=${encoded}`;
+  window.open(url, '_blank');
+  showToast('📲 Opening WhatsApp...');
+}
+
+function copyWAMessage() {
+  const msg = document.getElementById('waBubble').value;
+  navigator.clipboard.writeText(msg).then(() => showToast('📋 Copied to clipboard!'));
+}
+
+// ─── DRAG & DROP — DAILY ───
+function initDragDaily(container, tasks) {
+  let dragId = null;
+  let dragOverId = null;
+
+  container.querySelectorAll('.task-item').forEach(item => {
+    item.addEventListener('dragstart', e => {
+      dragId = parseInt(item.dataset.id);
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dragging');
+      container.querySelectorAll('.task-item').forEach(i => i.classList.remove('drag-over'));
+      dragId = null; dragOverId = null;
+    });
+
+    item.addEventListener('dragover', e => {
+      e.preventDefault();
+      const overId = parseInt(item.dataset.id);
+      if(overId === dragId) return;
+      if(overId !== dragOverId) {
+        container.querySelectorAll('.task-item').forEach(i => i.classList.remove('drag-over'));
+        item.classList.add('drag-over');
+        dragOverId = overId;
+      }
+    });
+
+    item.addEventListener('dragleave', () => {
+      item.classList.remove('drag-over');
+    });
+
+    item.addEventListener('drop', e => {
+      e.preventDefault();
+      const toId = parseInt(item.dataset.id);
+      if(dragId === toId) return;
+      const fromIdx = state.daily.findIndex(t => t.id === dragId);
+      const toIdx = state.daily.findIndex(t => t.id === toId);
+      if(fromIdx === -1 || toIdx === -1) return;
+      const [moved] = state.daily.splice(fromIdx, 1);
+      state.daily.splice(toIdx, 0, moved);
+      save();
+      renderDaily();
+      showToast('↕ Order saved');
+    });
+  });
+
+  // Touch support
+  let touchDragId = null, touchClone = null, touchOverItem = null;
+  container.querySelectorAll('.drag-handle').forEach(handle => {
+    handle.addEventListener('touchstart', e => {
+      const item = handle.closest('.task-item');
+      touchDragId = parseInt(item.dataset.id);
+      item.classList.add('dragging');
+      // create ghost
+      touchClone = item.cloneNode(true);
+      touchClone.style.cssText = `position:fixed;pointer-events:none;opacity:0.7;z-index:9999;width:${item.offsetWidth}px;border:1px dashed var(--accent);border-radius:8px;`;
+      document.body.appendChild(touchClone);
+    }, {passive:true});
+
+    handle.addEventListener('touchmove', e => {
+      if(!touchDragId) return;
+      e.preventDefault();
+      const touch = e.touches[0];
+      if(touchClone) { touchClone.style.left = (touch.clientX - 20) + 'px'; touchClone.style.top = (touch.clientY - 20) + 'px'; }
+      // find item under touch
+      touchClone.style.display = 'none';
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      touchClone.style.display = '';
+      const overItem = el?.closest?.('.task-item[data-id]');
+      if(touchOverItem && touchOverItem !== overItem) touchOverItem.classList.remove('drag-over');
+      if(overItem && parseInt(overItem.dataset.id) !== touchDragId) {
+        overItem.classList.add('drag-over');
+        touchOverItem = overItem;
+      }
+    }, {passive:false});
+
+    handle.addEventListener('touchend', () => {
+      if(!touchDragId) return;
+      if(touchClone) { touchClone.remove(); touchClone = null; }
+      container.querySelectorAll('.task-item').forEach(i => { i.classList.remove('dragging'); i.classList.remove('drag-over'); });
+      if(touchOverItem) {
+        const toId = parseInt(touchOverItem.dataset.id);
+        const fromIdx = state.daily.findIndex(t => t.id === touchDragId);
+        const toIdx = state.daily.findIndex(t => t.id === toId);
+        if(fromIdx !== -1 && toIdx !== -1 && fromIdx !== toIdx) {
+          const [moved] = state.daily.splice(fromIdx, 1);
+          state.daily.splice(toIdx, 0, moved);
+          save(); renderDaily();
+          showToast('↕ Order saved');
+        }
+      }
+      touchDragId = null; touchOverItem = null;
+    });
+  });
+}
+
+// ─── DRAG & DROP — MONTHLY ───
+function initDragMonthly(container, wk) {
+  let dragId = null;
+
+  container.querySelectorAll('.task-item').forEach(item => {
+    item.addEventListener('dragstart', e => {
+      dragId = parseInt(item.dataset.id);
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dragging');
+      container.querySelectorAll('.task-item').forEach(i => i.classList.remove('drag-over'));
+      dragId = null;
+    });
+
+    item.addEventListener('dragover', e => {
+      e.preventDefault();
+      const overId = parseInt(item.dataset.id);
+      if(overId === dragId) return;
+      container.querySelectorAll('.task-item').forEach(i => i.classList.remove('drag-over'));
+      item.classList.add('drag-over');
+    });
+
+    item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
+
+    item.addEventListener('drop', e => {
+      e.preventDefault();
+      const toId = parseInt(item.dataset.id);
+      if(dragId === toId) return;
+      const fromIdx = state.monthly.findIndex(t => t.id === dragId);
+      const toIdx = state.monthly.findIndex(t => t.id === toId);
+      if(fromIdx === -1 || toIdx === -1) return;
+      const [moved] = state.monthly.splice(fromIdx, 1);
+      state.monthly.splice(toIdx, 0, moved);
+      save(); renderMonthly();
+      showToast('↕ Order saved');
+    });
+  });
+}
+
+// ─── UTILS ───
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showToast(msg, duration = 2500) {
+  const existing = document.querySelector('.toast');
+  if(existing) existing.remove();
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => {
+    el.style.animation = 'toastOut 0.3s ease forwards';
+    setTimeout(() => el.remove(), 300);
+  }, duration);
+}
+
+// Auto-preview on checkbox change
+['waIncludeDone','waIncludeMonthly','waIncludeGoals'].forEach(id => {
+  document.getElementById(id).addEventListener('change', refreshWAPreview);
+});
+
+// Init WA preview on load if on that tab
+refreshWAPreview();
+</script>
+</body>
+</html>
