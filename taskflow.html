@@ -799,16 +799,166 @@
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 3px; }
 
-  /* ───── MOBILE ADJUSTMENTS ───── */
-  @media(max-width:480px) {
-    .section-title { font-size: 22px; }
-    .main { padding: 16px 14px; }
-    .stats-row { grid-template-columns: 1fr 1fr; }
-    .goals-grid { grid-template-columns: 1fr; }
+  /* ───── AUTH MODAL ───── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(6px);
+    z-index: 500;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.2s ease;
   }
+
+  .modal-box {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-lg);
+    padding: 36px 32px;
+    width: 100%;
+    max-width: 380px;
+    position: relative;
+  }
+
+  .modal-logo {
+    display: flex; align-items: center; gap: 10px;
+    font-family: var(--font-head);
+    font-size: 22px; font-weight: 800;
+    margin-bottom: 6px;
+  }
+
+  .modal-sub {
+    font-size: 13px; color: var(--text2);
+    margin-bottom: 28px;
+  }
+
+  .modal-tabs {
+    display: flex; gap: 0;
+    background: var(--bg3);
+    border-radius: var(--radius-sm);
+    padding: 3px;
+    margin-bottom: 24px;
+  }
+
+  .modal-tab {
+    flex: 1; padding: 8px;
+    border: none; background: transparent;
+    color: var(--text2); font-family: var(--font-body);
+    font-size: 13px; font-weight: 500;
+    cursor: pointer; border-radius: 6px;
+    transition: var(--transition);
+  }
+
+  .modal-tab.active { background: var(--bg2); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+
+  .modal-field { margin-bottom: 14px; }
+  .modal-field label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 5px; font-weight: 500; }
+
+  .modal-input {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 11px 14px;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px; outline: none;
+    transition: var(--transition);
+    letter-spacing: 0.02em;
+  }
+  .modal-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+  .modal-input::placeholder { color: var(--text3); }
+
+  .modal-btn {
+    width: 100%; padding: 12px;
+    background: var(--accent); color: #0d0d0f;
+    border: none; border-radius: var(--radius-sm);
+    font-family: var(--font-head); font-size: 15px; font-weight: 700;
+    cursor: pointer; transition: var(--transition);
+    margin-top: 6px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .modal-btn:hover { background: var(--accent2); }
+  .modal-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .modal-error {
+    background: var(--red-dim);
+    border: 1px solid rgba(251,75,75,0.2);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 13px; color: var(--red);
+    margin-bottom: 14px;
+    display: none;
+  }
+
+  .modal-hint {
+    font-size: 12px; color: var(--text3);
+    text-align: center; margin-top: 16px;
+    line-height: 1.5;
+  }
+
+  /* ───── SYNC INDICATOR ───── */
+  .sync-pill {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--text2);
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .sync-pill:hover { border-color: var(--border2); color: var(--text); }
+
+  .sync-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--text3);
+    flex-shrink: 0;
+    transition: background 0.3s ease;
+  }
+  .sync-dot.online { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .sync-dot.syncing { background: var(--amber); animation: pulse 0.8s infinite; }
+  .sync-dot.error { background: var(--red); }
+
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+
+  .sync-user { font-weight: 500; color: var(--text); max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
 </head>
 <body>
+
+<!-- ─── AUTH MODAL ─── -->
+<div class="modal-overlay" id="authModal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-logo"><div class="logo-dot"></div>TaskFlow</div>
+    <div class="modal-sub">Sign in to sync across all your devices</div>
+    <div class="modal-tabs">
+      <button class="modal-tab active" id="tabSignIn" onclick="switchTab('signin')">Sign In</button>
+      <button class="modal-tab" id="tabSignUp" onclick="switchTab('signup')">Create Account</button>
+    </div>
+    <div id="modalError" class="modal-error"></div>
+    <div class="modal-field">
+      <label>Username</label>
+      <input class="modal-input" id="authUser" type="text" placeholder="e.g. john_doe" autocomplete="username" maxlength="32" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9_]/g,'')">
+    </div>
+    <div class="modal-field">
+      <label>PIN <span style="color:var(--text3);font-weight:400">(4–8 digits)</span></label>
+      <input class="modal-input" id="authPin" type="password" placeholder="••••" autocomplete="current-password" maxlength="8" inputmode="numeric" onkeydown="if(event.key==='Enter')submitAuth()">
+    </div>
+    <button class="modal-btn" id="authSubmitBtn" onclick="submitAuth()">
+      <span id="authBtnText">Sign In</span>
+    </button>
+    <div class="modal-hint" id="signupHint" style="display:none">
+      Your username + PIN are the only credentials.<br>Pick something you'll remember — there's no recovery.
+    </div>
+    <div class="modal-hint">
+      <span style="color:var(--text3)">or</span>
+      <button onclick="skipAuth()" style="background:none;border:none;color:var(--text2);cursor:pointer;font-family:var(--font-body);font-size:12px;text-decoration:underline;padding:0 4px">continue without account</button>
+      <span style="color:var(--text3)">(local only)</span>
+    </div>
+  </div>
+</div>
 
 <div class="app">
 
@@ -820,6 +970,10 @@
     </div>
     <div class="topbar-right">
       <span class="date-badge" id="todayDate"></span>
+      <div class="sync-pill" id="syncPill" onclick="onSyncPillClick()" title="Sync status">
+        <div class="sync-dot" id="syncDot"></div>
+        <span id="syncLabel">Local</span>
+      </div>
       <button class="theme-btn" onclick="toggleTheme()" title="Toggle theme">☀</button>
     </div>
   </header>
@@ -1104,27 +1258,224 @@
 
 <script>
 // ─── STATE ───
-let state = JSON.parse(localStorage.getItem('taskflow_v2') || '{}');
-if(!state.daily) state.daily = [];
-if(!state.monthly) state.monthly = [];
-if(!state.goals) state.goals = [];
+let state = { daily:[], monthly:[], goals:[] };
+let currentUser = null; // { username, pinHash }
+let syncTimeout = null;
+let isSyncing = false;
 
 let currentDailyFilter = 'all';
 const emojis = { work:'💼', personal:'✨', health:'💪', urgent:'🔥', other:'📌', finance:'💰' };
 const catLabel = { work:'Work', personal:'Personal', health:'Health', urgent:'Urgent', other:'Other', finance:'Finance' };
 
-function save() { localStorage.setItem('taskflow_v2', JSON.stringify(state)); }
+// ─── SIMPLE HASH (PIN obfuscation, not cryptographic) ───
+async function hashPin(pin) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('taskflow_' + pin));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('').slice(0,32);
+}
+
+// ─── STORAGE KEYS ───
+function userDataKey(username) { return `user_data_${username}`; }
+function userAuthKey(username) { return `user_auth_${username}`; }
+
+// ─── SAVE (local + cloud if signed in) ───
+function save() {
+  localStorage.setItem('taskflow_v2', JSON.stringify(state));
+  if(currentUser) scheduleCloudSync();
+}
+
+function scheduleCloudSync() {
+  clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(cloudSave, 1200);
+  setSyncStatus('syncing');
+}
+
+async function cloudSave() {
+  if(!currentUser || isSyncing) return;
+  isSyncing = true;
+  try {
+    await window.storage.set(userDataKey(currentUser.username), JSON.stringify(state), true);
+    setSyncStatus('online');
+  } catch(e) {
+    setSyncStatus('error');
+  }
+  isSyncing = false;
+}
+
+async function cloudLoad() {
+  if(!currentUser) return false;
+  try {
+    const res = await window.storage.get(userDataKey(currentUser.username), true);
+    if(res && res.value) {
+      const cloud = JSON.parse(res.value);
+      if(cloud && cloud.daily) {
+        state = cloud;
+        if(!state.monthly) state.monthly = [];
+        if(!state.goals) state.goals = [];
+        localStorage.setItem('taskflow_v2', JSON.stringify(state));
+        return true;
+      }
+    }
+  } catch(e) {}
+  return false;
+}
+
+// ─── SYNC STATUS UI ───
+function setSyncStatus(status) {
+  const dot = document.getElementById('syncDot');
+  const label = document.getElementById('syncLabel');
+  dot.className = 'sync-dot ' + status;
+  if(status === 'online') label.textContent = currentUser ? currentUser.username : 'Synced';
+  else if(status === 'syncing') label.textContent = 'Saving…';
+  else if(status === 'error') label.textContent = 'Sync error';
+  else { dot.className = 'sync-dot'; label.textContent = 'Local'; }
+}
+
+function onSyncPillClick() {
+  if(currentUser) {
+    if(confirm(`Sign out of "${currentUser.username}"?\n\nYour data stays saved in the cloud.`)) signOut();
+  } else {
+    openAuthModal();
+  }
+}
+
+// ─── AUTH MODAL ───
+let authMode = 'signin';
+
+function openAuthModal() {
+  document.getElementById('authModal').style.display = 'flex';
+  document.getElementById('authUser').focus();
+}
+
+function closeAuthModal() {
+  document.getElementById('authModal').style.display = 'none';
+}
+
+function switchTab(mode) {
+  authMode = mode;
+  document.getElementById('tabSignIn').classList.toggle('active', mode==='signin');
+  document.getElementById('tabSignUp').classList.toggle('active', mode==='signup');
+  document.getElementById('authBtnText').textContent = mode==='signin' ? 'Sign In' : 'Create Account';
+  document.getElementById('signupHint').style.display = mode==='signup' ? 'block' : 'none';
+  document.getElementById('modalError').style.display = 'none';
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('modalError');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+async function submitAuth() {
+  const username = document.getElementById('authUser').value.trim();
+  const pin = document.getElementById('authPin').value.trim();
+
+  if(!username) return showAuthError('Please enter a username.');
+  if(username.length < 3) return showAuthError('Username must be at least 3 characters.');
+  if(!/^\d{4,8}$/.test(pin)) return showAuthError('PIN must be 4–8 digits.');
+
+  const btn = document.getElementById('authSubmitBtn');
+  btn.disabled = true;
+  document.getElementById('authBtnText').textContent = authMode==='signin' ? 'Signing in…' : 'Creating…';
+  document.getElementById('modalError').style.display = 'none';
+
+  try {
+    const pinHash = await hashPin(pin);
+
+    if(authMode === 'signup') {
+      // Check if username already taken
+      try {
+        const existing = await window.storage.get(userAuthKey(username), true);
+        if(existing) { btn.disabled=false; document.getElementById('authBtnText').textContent='Create Account'; return showAuthError('Username already taken. Try a different one.'); }
+      } catch(e) {} // key not found = available
+
+      // Create account
+      await window.storage.set(userAuthKey(username), JSON.stringify({ pinHash, created: Date.now() }), true);
+      currentUser = { username, pinHash };
+      localStorage.setItem('tf_user', JSON.stringify({ username, pinHash }));
+      // Upload local data to cloud
+      await cloudSave();
+      closeAuthModal();
+      setSyncStatus('online');
+      renderAll();
+      showToast(`✅ Account created! Welcome, ${username}`);
+
+    } else {
+      // Sign in
+      let authRecord;
+      try {
+        const res = await window.storage.get(userAuthKey(username), true);
+        if(!res) throw new Error('not found');
+        authRecord = JSON.parse(res.value);
+      } catch(e) {
+        btn.disabled=false; document.getElementById('authBtnText').textContent='Sign In';
+        return showAuthError('Account not found. Create one first.');
+      }
+
+      if(authRecord.pinHash !== pinHash) {
+        btn.disabled=false; document.getElementById('authBtnText').textContent='Sign In';
+        return showAuthError('Wrong PIN. Try again.');
+      }
+
+      currentUser = { username, pinHash };
+      localStorage.setItem('tf_user', JSON.stringify({ username, pinHash }));
+      // Load cloud data
+      const loaded = await cloudLoad();
+      closeAuthModal();
+      setSyncStatus('online');
+      renderAll();
+      showToast(loaded ? `☁ Synced! Welcome back, ${username}` : `✅ Signed in as ${username}`);
+    }
+  } catch(e) {
+    btn.disabled=false;
+    document.getElementById('authBtnText').textContent = authMode==='signin' ? 'Sign In' : 'Create Account';
+    showAuthError('Something went wrong. Check your connection.');
+  }
+}
+
+function skipAuth() {
+  closeAuthModal();
+  showToast('📱 Running locally — data stays on this device');
+}
+
+function signOut() {
+  currentUser = null;
+  localStorage.removeItem('tf_user');
+  setSyncStatus('local');
+  showToast('👋 Signed out');
+}
 
 // ─── INIT ───
-(function init(){
+(async function init(){
   const d = new Date();
   document.getElementById('todayDate').textContent = d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
   document.getElementById('goalDeadline').min = d.toISOString().split('T')[0];
 
-  // Load saved theme
   if(localStorage.getItem('tf_theme') === 'light') document.body.classList.add('light');
 
-  renderAll();
+  // Try restore session
+  const savedUser = localStorage.getItem('tf_user');
+  if(savedUser) {
+    try {
+      currentUser = JSON.parse(savedUser);
+      setSyncStatus('syncing');
+      // Load local first for instant render
+      const local = JSON.parse(localStorage.getItem('taskflow_v2') || '{}');
+      if(local.daily) { state = local; if(!state.monthly) state.monthly=[]; if(!state.goals) state.goals=[]; }
+      renderAll();
+      // Then sync from cloud
+      const loaded = await cloudLoad();
+      if(loaded) renderAll();
+      setSyncStatus('online');
+    } catch(e) {
+      currentUser = null; setSyncStatus('local');
+    }
+  } else {
+    // Load local data
+    const local = JSON.parse(localStorage.getItem('taskflow_v2') || '{}');
+    if(local.daily) { state = local; if(!state.monthly) state.monthly=[]; if(!state.goals) state.goals=[]; }
+    renderAll();
+    // Show auth modal after short delay
+    setTimeout(() => openAuthModal(), 600);
+  }
 })();
 
 // ─── THEME ───
