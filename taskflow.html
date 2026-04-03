@@ -1084,6 +1084,11 @@
       <button class="modal-tab" id="tabSignUp" onclick="switchTab('signup')">Create Account</button>
     </div>
     <div id="modalError" class="modal-error"></div>
+
+    <div class="modal-field">
+      <label>JSONBin Master Key <span style="color:var(--text3);font-weight:400">— <a href="https://jsonbin.io" target="_blank" style="color:var(--accent);text-decoration:none">get free at jsonbin.io</a></span></label>
+      <input class="modal-input" id="authApiKey" type="password" placeholder="$2a$10$…" autocomplete="off">
+    </div>
     <div class="modal-field">
       <label>Username</label>
       <input class="modal-input" id="authUser" type="text" placeholder="e.g. john_doe" autocomplete="username" maxlength="32" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9_]/g,'')">
@@ -1092,11 +1097,16 @@
       <label>PIN <span style="color:var(--text3);font-weight:400">(4–8 digits)</span></label>
       <input class="modal-input" id="authPin" type="password" placeholder="••••" autocomplete="current-password" maxlength="8" inputmode="numeric" onkeydown="if(event.key==='Enter')submitAuth()">
     </div>
+    <div class="modal-field" id="binIdField" style="display:none">
+      <label>Bin ID <span style="color:var(--text3);font-weight:400">— shown after account creation</span></label>
+      <input class="modal-input" id="authBinId" type="text" placeholder="6…" autocomplete="off">
+    </div>
+
     <button class="modal-btn" id="authSubmitBtn" onclick="submitAuth()">
       <span id="authBtnText">Sign In</span>
     </button>
     <div class="modal-hint" id="signupHint" style="display:none">
-      Your username + PIN are the only credentials.<br>Pick something you'll remember — there's no recovery.
+      A free bin is created on JSONBin to store your data.<br>After signup, <strong>save your Bin ID</strong> — you'll need it to sign in on other devices.
     </div>
     <div class="modal-hint">
       <span style="color:var(--text3)">or</span>
@@ -1446,25 +1456,53 @@ let currentDailyFilter = 'all';
 const emojis = { work:'💼', personal:'✨', health:'💪', urgent:'🔥', other:'📌', finance:'💰' };
 const catLabel = { work:'Work', personal:'Personal', health:'Health', urgent:'Urgent', other:'Other', finance:'Finance' };
 
-// ─── SIMPLE HASH (PIN obfuscation, not cryptographic) ───
+// ─── JSONBIN CONFIG ───
+// Free at jsonbin.io — create account, get Master Key, paste below
+// One bin per user account is created automatically on signup
+const JSONBIN_MASTER_KEY = localStorage.getItem('tf_jsonbin_key') || '';
+const JSONBIN_BASE = 'https://api.jsonbin.io/v3';
+
+// ─── HASH (PIN protection) ───
 async function hashPin(pin) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('taskflow_' + pin));
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('').slice(0,32);
 }
 
-// ─── STORAGE KEYS ───
-function userDataKey(username) { return `user_data_${username}`; }
-function userAuthKey(username) { return `user_auth_${username}`; }
+// ─── JSONBIN API HELPERS ───
+async function jbPost(path, body, key) {
+  const headers = { 'Content-Type':'application/json' };
+  if(key) headers['X-Master-Key'] = key;
+  const r = await fetch(JSONBIN_BASE + path, { method:'POST', headers, body: JSON.stringify(body) });
+  if(!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
 
-// ─── SAVE (local + cloud if signed in) ───
+async function jbPut(binId, body, key) {
+  const headers = { 'Content-Type':'application/json' };
+  if(key) headers['X-Master-Key'] = key;
+  const r = await fetch(`${JSONBIN_BASE}/b/${binId}`, { method:'PUT', headers, body: JSON.stringify(body) });
+  if(!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+async function jbGet(binId, key) {
+  const headers = {};
+  if(key) headers['X-Master-Key'] = key;
+  const r = await fetch(`${JSONBIN_BASE}/b/${binId}/latest`, { headers });
+  if(!r.ok) throw new Error('HTTP ' + r.status);
+  const j = await r.json();
+  return j.record;
+}
+
+// ─── SAVE (local + cloud) ───
 function save() {
   localStorage.setItem('taskflow_v2', JSON.stringify(state));
-  if(currentUser) scheduleCloudSync();
+  if(currentUser && currentUser.binId && currentUser.apiKey) scheduleCloudSync();
 }
 
 function scheduleCloudSync() {
   clearTimeout(syncTimeout);
-  syncTimeout = setTimeout(cloudSave, 1200);
+  syncTimeout = setTimeout(cloudSave, 1400);
   setSyncStatus('syncing');
 }
 
@@ -1472,7 +1510,7 @@ async function cloudSave() {
   if(!currentUser || isSyncing) return;
   isSyncing = true;
   try {
-    await window.storage.set(userDataKey(currentUser.username), JSON.stringify(state), true);
+    await jbPut(currentUser.binId, { taskflowData: state, username: currentUser.username }, currentUser.apiKey);
     setSyncStatus('online');
   } catch(e) {
     setSyncStatus('error');
@@ -1481,18 +1519,15 @@ async function cloudSave() {
 }
 
 async function cloudLoad() {
-  if(!currentUser) return false;
+  if(!currentUser || !currentUser.binId) return false;
   try {
-    const res = await window.storage.get(userDataKey(currentUser.username), true);
-    if(res && res.value) {
-      const cloud = JSON.parse(res.value);
-      if(cloud && cloud.daily) {
-        state = cloud;
-        if(!state.monthly) state.monthly = [];
-        if(!state.goals) state.goals = [];
-        localStorage.setItem('taskflow_v2', JSON.stringify(state));
-        return true;
-      }
+    const rec = await jbGet(currentUser.binId, currentUser.apiKey);
+    if(rec && rec.taskflowData && rec.taskflowData.daily) {
+      state = rec.taskflowData;
+      if(!state.monthly) state.monthly = [];
+      if(!state.goals) state.goals = [];
+      localStorage.setItem('taskflow_v2', JSON.stringify(state));
+      return true;
     }
   } catch(e) {}
   return false;
@@ -1522,7 +1557,7 @@ let authMode = 'signin';
 
 function openAuthModal() {
   document.getElementById('authModal').style.display = 'flex';
-  document.getElementById('authUser').focus();
+  setTimeout(() => document.getElementById('authApiKey').focus(), 50);
 }
 
 function closeAuthModal() {
@@ -1535,6 +1570,7 @@ function switchTab(mode) {
   document.getElementById('tabSignUp').classList.toggle('active', mode==='signup');
   document.getElementById('authBtnText').textContent = mode==='signin' ? 'Sign In' : 'Create Account';
   document.getElementById('signupHint').style.display = mode==='signup' ? 'block' : 'none';
+  document.getElementById('binIdField').style.display = mode==='signin' ? 'block' : 'none';
   document.getElementById('modalError').style.display = 'none';
 }
 
@@ -1546,7 +1582,9 @@ function showAuthError(msg) {
 async function submitAuth() {
   const username = document.getElementById('authUser').value.trim();
   const pin = document.getElementById('authPin').value.trim();
+  const apiKey = document.getElementById('authApiKey').value.trim();
 
+  if(!apiKey) return showAuthError('Paste your JSONBin Master Key first.');
   if(!username) return showAuthError('Please enter a username.');
   if(username.length < 3) return showAuthError('Username must be at least 3 characters.');
   if(!/^\d{4,8}$/.test(pin)) return showAuthError('PIN must be 4–8 digits.');
@@ -1560,50 +1598,71 @@ async function submitAuth() {
   const resetBtn = (label) => { btn.disabled=false; document.getElementById('authBtnText').textContent=label; };
 
   if(authMode === 'signup') {
-    // Check if username already taken — storage.get throws if key missing, returns object if found
-    let taken = false;
+    // Create a new bin to store this user's data + auth info
+    let newBin;
     try {
-      const existing = await window.storage.get(userAuthKey(username), true);
-      if(existing && existing.value) taken = true;
-    } catch(e) { taken = false; } // throws = key doesn't exist = username free
-
-    if(taken) { resetBtn('Create Account'); return showAuthError('Username already taken. Try a different one.'); }
-
-    // Create account
-    try {
-      await window.storage.set(userAuthKey(username), JSON.stringify({ pinHash, created: Date.now() }), true);
+      newBin = await jbPost('/b', {
+        taskflowAuth: { username, pinHash, created: Date.now() },
+        taskflowData: state
+      }, apiKey);
     } catch(e) {
       resetBtn('Create Account');
-      return showAuthError('Could not save account. Try again.');
+      if(e.message.includes('401')) return showAuthError('Invalid API key. Check it and try again.');
+      return showAuthError('Could not connect to JSONBin. Check your key.');
     }
 
-    currentUser = { username, pinHash };
-    localStorage.setItem('tf_user', JSON.stringify({ username, pinHash }));
-    try { await cloudSave(); } catch(e) {}
+    const binId = newBin.metadata.id;
+    // Save bin ID mapping locally (keyed by username+hash so it's findable on signin)
+    // We store the binId in a second "index" bin if this is first time, else store locally
+    currentUser = { username, pinHash, binId, apiKey };
+    localStorage.setItem('tf_user', JSON.stringify(currentUser));
+    localStorage.setItem('tf_jsonbin_key', apiKey);
     closeAuthModal();
     setSyncStatus('online');
     renderAll();
-    showToast(`✅ Account created! Welcome, ${username}`);
+    // Show Bin ID prominently so user can save it for other devices
+    setTimeout(() => {
+      const msg = `✅ Account created! Welcome, ${username}\n\n📋 Your Bin ID (save this!):\n${binId}`;
+      if(confirm(msg + '\n\nCopy Bin ID to clipboard?')) {
+        navigator.clipboard.writeText(binId).catch(()=>{});
+      }
+    }, 300);
+    showToast(`✅ Welcome ${username}! Save your Bin ID.`, 5000);
 
   } else {
-    // Sign in — fetch auth record
-    let authRecord = null;
+    // Sign in: user must provide their bin ID (stored locally after first signup)
+    const binId = document.getElementById('authBinId').value.trim();
+    if(!binId) return showAuthError('Paste your Bin ID (shown after account creation).');
+
+    let rec;
     try {
-      const res = await window.storage.get(userAuthKey(username), true);
-      if(res && res.value) authRecord = JSON.parse(res.value);
-    } catch(e) { authRecord = null; }
+      rec = await jbGet(binId, apiKey);
+    } catch(e) {
+      resetBtn('Sign In');
+      if(e.message.includes('401')) return showAuthError('Invalid API key.');
+      if(e.message.includes('404')) return showAuthError('Bin ID not found.');
+      return showAuthError('Could not connect. Check your key and Bin ID.');
+    }
 
-    if(!authRecord) { resetBtn('Sign In'); return showAuthError('Account not found. Create one first.'); }
-    if(authRecord.pinHash !== pinHash) { resetBtn('Sign In'); return showAuthError('Wrong PIN. Try again.'); }
+    if(!rec || !rec.taskflowAuth) { resetBtn('Sign In'); return showAuthError('Invalid bin — not a TaskFlow account.'); }
+    if(rec.taskflowAuth.username !== username) { resetBtn('Sign In'); return showAuthError('Username does not match this bin.'); }
+    if(rec.taskflowAuth.pinHash !== pinHash) { resetBtn('Sign In'); return showAuthError('Wrong PIN.'); }
 
-    currentUser = { username, pinHash };
-    localStorage.setItem('tf_user', JSON.stringify({ username, pinHash }));
-    let loaded = false;
-    try { loaded = await cloudLoad(); } catch(e) {}
+    currentUser = { username, pinHash, binId, apiKey };
+    localStorage.setItem('tf_user', JSON.stringify(currentUser));
+    localStorage.setItem('tf_jsonbin_key', apiKey);
+
+    if(rec.taskflowData && rec.taskflowData.daily) {
+      state = rec.taskflowData;
+      if(!state.monthly) state.monthly = [];
+      if(!state.goals) state.goals = [];
+      localStorage.setItem('taskflow_v2', JSON.stringify(state));
+    }
+
     closeAuthModal();
     setSyncStatus('online');
     renderAll();
-    showToast(loaded ? `☁ Synced! Welcome back, ${username}` : `✅ Signed in as ${username}`);
+    showToast(`☁ Synced! Welcome back, ${username}`);
   }
 }
 
@@ -1627,17 +1686,19 @@ function signOut() {
 
   if(localStorage.getItem('tf_theme') === 'light') document.body.classList.add('light');
 
+  // Pre-fill saved API key in modal
+  const savedKey = localStorage.getItem('tf_jsonbin_key');
+  if(savedKey) document.getElementById('authApiKey').value = savedKey;
+
   // Try restore session
   const savedUser = localStorage.getItem('tf_user');
   if(savedUser) {
     try {
       currentUser = JSON.parse(savedUser);
       setSyncStatus('syncing');
-      // Load local first for instant render
       const local = JSON.parse(localStorage.getItem('taskflow_v2') || '{}');
       if(local.daily) { state = local; if(!state.monthly) state.monthly=[]; if(!state.goals) state.goals=[]; }
       renderAll();
-      // Then sync from cloud
       const loaded = await cloudLoad();
       if(loaded) renderAll();
       setSyncStatus('online');
@@ -1645,11 +1706,9 @@ function signOut() {
       currentUser = null; setSyncStatus('local');
     }
   } else {
-    // Load local data
     const local = JSON.parse(localStorage.getItem('taskflow_v2') || '{}');
     if(local.daily) { state = local; if(!state.monthly) state.monthly=[]; if(!state.goals) state.goals=[]; }
     renderAll();
-    // Show auth modal after short delay
     setTimeout(() => openAuthModal(), 600);
   }
 })();
