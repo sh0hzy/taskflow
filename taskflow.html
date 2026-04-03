@@ -1556,57 +1556,54 @@ async function submitAuth() {
   document.getElementById('authBtnText').textContent = authMode==='signin' ? 'Signing in…' : 'Creating…';
   document.getElementById('modalError').style.display = 'none';
 
-  try {
-    const pinHash = await hashPin(pin);
+  const pinHash = await hashPin(pin);
+  const resetBtn = (label) => { btn.disabled=false; document.getElementById('authBtnText').textContent=label; };
 
-    if(authMode === 'signup') {
-      // Check if username already taken
-      try {
-        const existing = await window.storage.get(userAuthKey(username), true);
-        if(existing) { btn.disabled=false; document.getElementById('authBtnText').textContent='Create Account'; return showAuthError('Username already taken. Try a different one.'); }
-      } catch(e) {} // key not found = available
+  if(authMode === 'signup') {
+    // Check if username already taken — storage.get throws if key missing, returns object if found
+    let taken = false;
+    try {
+      const existing = await window.storage.get(userAuthKey(username), true);
+      if(existing && existing.value) taken = true;
+    } catch(e) { taken = false; } // throws = key doesn't exist = username free
 
-      // Create account
+    if(taken) { resetBtn('Create Account'); return showAuthError('Username already taken. Try a different one.'); }
+
+    // Create account
+    try {
       await window.storage.set(userAuthKey(username), JSON.stringify({ pinHash, created: Date.now() }), true);
-      currentUser = { username, pinHash };
-      localStorage.setItem('tf_user', JSON.stringify({ username, pinHash }));
-      // Upload local data to cloud
-      await cloudSave();
-      closeAuthModal();
-      setSyncStatus('online');
-      renderAll();
-      showToast(`✅ Account created! Welcome, ${username}`);
-
-    } else {
-      // Sign in
-      let authRecord;
-      try {
-        const res = await window.storage.get(userAuthKey(username), true);
-        if(!res) throw new Error('not found');
-        authRecord = JSON.parse(res.value);
-      } catch(e) {
-        btn.disabled=false; document.getElementById('authBtnText').textContent='Sign In';
-        return showAuthError('Account not found. Create one first.');
-      }
-
-      if(authRecord.pinHash !== pinHash) {
-        btn.disabled=false; document.getElementById('authBtnText').textContent='Sign In';
-        return showAuthError('Wrong PIN. Try again.');
-      }
-
-      currentUser = { username, pinHash };
-      localStorage.setItem('tf_user', JSON.stringify({ username, pinHash }));
-      // Load cloud data
-      const loaded = await cloudLoad();
-      closeAuthModal();
-      setSyncStatus('online');
-      renderAll();
-      showToast(loaded ? `☁ Synced! Welcome back, ${username}` : `✅ Signed in as ${username}`);
+    } catch(e) {
+      resetBtn('Create Account');
+      return showAuthError('Could not save account. Try again.');
     }
-  } catch(e) {
-    btn.disabled=false;
-    document.getElementById('authBtnText').textContent = authMode==='signin' ? 'Sign In' : 'Create Account';
-    showAuthError('Something went wrong. Check your connection.');
+
+    currentUser = { username, pinHash };
+    localStorage.setItem('tf_user', JSON.stringify({ username, pinHash }));
+    try { await cloudSave(); } catch(e) {}
+    closeAuthModal();
+    setSyncStatus('online');
+    renderAll();
+    showToast(`✅ Account created! Welcome, ${username}`);
+
+  } else {
+    // Sign in — fetch auth record
+    let authRecord = null;
+    try {
+      const res = await window.storage.get(userAuthKey(username), true);
+      if(res && res.value) authRecord = JSON.parse(res.value);
+    } catch(e) { authRecord = null; }
+
+    if(!authRecord) { resetBtn('Sign In'); return showAuthError('Account not found. Create one first.'); }
+    if(authRecord.pinHash !== pinHash) { resetBtn('Sign In'); return showAuthError('Wrong PIN. Try again.'); }
+
+    currentUser = { username, pinHash };
+    localStorage.setItem('tf_user', JSON.stringify({ username, pinHash }));
+    let loaded = false;
+    try { loaded = await cloudLoad(); } catch(e) {}
+    closeAuthModal();
+    setSyncStatus('online');
+    renderAll();
+    showToast(loaded ? `☁ Synced! Welcome back, ${username}` : `✅ Signed in as ${username}`);
   }
 }
 
