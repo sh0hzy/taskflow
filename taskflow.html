@@ -1070,6 +1070,113 @@
     .cal-day-num { font-size: 12px; }
   }
 
+
+  /* ───── SUBTASKS ───── */
+  .subtasks-wrap {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+
+  .subtask-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    animation: slideIn 0.15s ease;
+  }
+
+  .subtask-check {
+    width: 15px; height: 15px;
+    border-radius: 3px;
+    border: 1.5px solid var(--border2);
+    background: transparent;
+    cursor: pointer;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px;
+    transition: var(--transition);
+  }
+  .subtask-check:hover { border-color: var(--accent); background: var(--accent-dim); }
+  .subtask-check.checked { background: var(--accent); border-color: var(--accent); color: #0d0d0f; }
+
+  .subtask-text {
+    flex: 1;
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.3;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .subtask-text.done { text-decoration: line-through; color: var(--text3); }
+
+  .subtask-del {
+    opacity: 0;
+    background: none; border: none;
+    color: var(--text3); cursor: pointer;
+    font-size: 12px; padding: 2px 5px;
+    border-radius: 4px;
+    transition: var(--transition);
+  }
+  .subtask-row:hover .subtask-del { opacity: 1; }
+  .subtask-del:hover { color: var(--red); background: var(--red-dim); }
+
+  .subtask-add-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .subtask-add-row input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    border-bottom: 1px dashed var(--border2);
+    border-radius: 0;
+    padding: 3px 2px;
+    font-size: 12px;
+    color: var(--text2);
+    font-family: var(--font-body);
+    outline: none;
+    transition: var(--transition);
+  }
+  .subtask-add-row input:focus { border-color: var(--accent); color: var(--text); }
+  .subtask-add-row input::placeholder { color: var(--text3); }
+
+  .subtask-add-btn {
+    background: none; border: none;
+    color: var(--text3); cursor: pointer;
+    font-size: 16px; line-height: 1;
+    padding: 0 2px;
+    transition: var(--transition);
+  }
+  .subtask-add-btn:hover { color: var(--accent); }
+
+  .subtask-toggle {
+    background: none; border: none;
+    color: var(--text3); cursor: pointer;
+    font-size: 11px; padding: 2px 6px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    transition: var(--transition);
+    white-space: nowrap;
+  }
+  .subtask-toggle:hover { color: var(--text2); border-color: var(--border2); }
+
+  .subtask-progress {
+    display: flex; align-items: center; gap: 6px;
+    margin-top: 2px;
+  }
+  .subtask-bar {
+    flex: 1; height: 3px;
+    background: var(--bg4); border-radius: 2px; overflow: hidden;
+  }
+  .subtask-bar-fill {
+    height: 100%; background: var(--accent); border-radius: 2px;
+    transition: width 0.3s ease;
+  }
+  .subtask-count { font-size: 10px; color: var(--text3); }
+
 </style>
 </head>
 <body>
@@ -1706,26 +1813,7 @@ function renderDaily() {
   }
 
   const isDraggable = currentDailyFilter === 'all';
-  list.innerHTML = tasks.map(t => `
-    <div class="task-item ${t.done ? 'done' : ''}" data-id="${t.id}" ${isDraggable ? 'draggable="true"' : ''}>
-      ${isDraggable ? `<div class="drag-handle" title="Drag to reorder">⋮⋮</div>` : ''}
-      <div class="task-check ${t.done ? 'checked' : ''}" onclick="toggleDailyTask(${t.id})">
-        ${t.done ? '✓' : ''}
-      </div>
-      <div class="task-content">
-        <div class="task-text">${escHtml(t.text)}</div>
-        <div class="task-meta">
-          <span class="tag tag-${t.cat}">${emojis[t.cat]} ${catLabel[t.cat]}</span>
-          <span class="priority-dot p-${t.priority}" title="${t.priority} priority"></span>
-          <span style="font-size:11px; color:var(--text3)">${t.priority}</span>
-        </div>
-      </div>
-      <div class="task-actions">
-        <button class="btn btn-danger" onclick="deleteTask(${t.id},'daily')" title="Delete">✕</button>
-      </div>
-    </div>
-  `).join('');
-
+  list.innerHTML = tasks.map(t => renderTaskItem(t, 'daily', isDraggable)).join('');
   if(isDraggable) initDragDaily(list, tasks);
 }
 
@@ -1760,21 +1848,7 @@ function renderMonthly() {
     html += `<div class="month-group">
       <div class="month-group-title">${wk}</div>
       <div class="tasks-grid" data-week="${wk}">
-        ${tasks.map(t => `
-          <div class="task-item ${t.done ? 'done' : ''}" data-id="${t.id}" draggable="true">
-            <div class="drag-handle" title="Drag to reorder">⋮⋮</div>
-            <div class="task-check ${t.done ? 'checked' : ''}" onclick="toggleMonthly(${t.id})">${t.done ? '✓' : ''}</div>
-            <div class="task-content">
-              <div class="task-text">${escHtml(t.text)}</div>
-              <div class="task-meta">
-                <span class="tag tag-${t.cat}">${emojis[t.cat]} ${catLabel[t.cat]}</span>
-              </div>
-            </div>
-            <div class="task-actions">
-              <button class="btn btn-danger" onclick="deleteTask(${t.id},'monthly')" title="Delete">✕</button>
-            </div>
-          </div>
-        `).join('')}
+        ${tasks.map(t => renderTaskItem(t, 'monthly', true)).join('')}
       </div>
     </div>`;
   });
@@ -1947,6 +2021,109 @@ function sendToWhatsApp() {
 function copyWAMessage() {
   const msg = document.getElementById('waBubble').value;
   navigator.clipboard.writeText(msg).then(() => showToast('📋 Copied to clipboard!'));
+}
+
+
+// ─── SUBTASKS ───
+function renderTaskItem(t, arr, draggable) {
+  const subs = t.subtasks || [];
+  const subDone = subs.filter(s => s.done).length;
+  const hasSubs = subs.length > 0;
+  const isOpen = t._subOpen || false;
+  const pct = hasSubs ? Math.round(subDone / subs.length * 100) : 0;
+
+  const toggleFn = arr === 'daily' ? `toggleDailyTask` : `toggleMonthly`;
+  const checkClick = `onclick="${toggleFn}(${t.id})"`;
+
+  return `
+    <div class="task-item ${t.done ? 'done' : ''}" data-id="${t.id}" ${draggable ? 'draggable="true"' : ''} style="flex-direction:column;align-items:stretch;padding:10px 14px">
+      <div style="display:flex;align-items:center;gap:12px">
+        ${draggable ? `<div class="drag-handle" title="Drag to reorder" style="align-self:center">⋮⋮</div>` : ''}
+        <div class="task-check ${t.done ? 'checked' : ''}" ${checkClick} style="flex-shrink:0">
+          ${t.done ? '✓' : ''}
+        </div>
+        <div class="task-content" style="flex:1;min-width:0">
+          <div class="task-text">${escHtml(t.text)}</div>
+          <div class="task-meta">
+            <span class="tag tag-${t.cat}">${emojis[t.cat]} ${catLabel[t.cat]}</span>
+            ${arr === 'daily' ? `<span class="priority-dot p-${t.priority}" title="${t.priority} priority"></span><span style="font-size:11px;color:var(--text3)">${t.priority}</span>` : ''}
+            ${hasSubs ? `<div class="subtask-progress">
+              <div class="subtask-bar"><div class="subtask-bar-fill" style="width:${pct}%"></div></div>
+              <span class="subtask-count">${subDone}/${subs.length}</span>
+            </div>` : ''}
+          </div>
+        </div>
+        <div class="task-actions" style="flex-shrink:0;display:flex;gap:4px;align-items:center">
+          <button class="subtask-toggle" onclick="toggleSubOpen(${t.id},'${arr}')" title="Subtasks">
+            ${hasSubs ? (isOpen ? '▲' : '▼') : '+'} ${hasSubs ? 'subtasks' : 'add subtask'}
+          </button>
+          <button class="btn btn-danger" onclick="deleteTask(${t.id},'${arr}')" title="Delete">✕</button>
+        </div>
+      </div>
+      ${isOpen ? `
+      <div class="subtasks-wrap">
+        ${subs.map((s,i) => `
+          <div class="subtask-row">
+            <div class="subtask-check ${s.done ? 'checked' : ''}" onclick="toggleSubtask(${t.id},${i},'${arr}')">
+              ${s.done ? '✓' : ''}
+            </div>
+            <span class="subtask-text ${s.done ? 'done' : ''}" onclick="toggleSubtask(${t.id},${i},'${arr}')">${escHtml(s.text)}</span>
+            <button class="subtask-del" onclick="deleteSubtask(${t.id},${i},'${arr}')">✕</button>
+          </div>
+        `).join('')}
+        <div class="subtask-add-row">
+          <div style="width:15px;flex-shrink:0"></div>
+          <input id="subInput_${t.id}" type="text" placeholder="Add subtask…"
+            onkeydown="if(event.key==='Enter')addSubtask(${t.id},'${arr}')">
+          <button class="subtask-add-btn" onclick="addSubtask(${t.id},'${arr}')">＋</button>
+        </div>
+      </div>` : ''}
+    </div>`;
+}
+
+function toggleSubOpen(id, arr) {
+  const t = state[arr].find(t => t.id === id);
+  if(!t) return;
+  t._subOpen = !t._subOpen;
+  if(!t.subtasks) t.subtasks = [];
+  arr === 'daily' ? renderDaily() : renderMonthly();
+}
+
+function addSubtask(taskId, arr) {
+  const inp = document.getElementById(`subInput_${taskId}`);
+  if(!inp) return;
+  const val = inp.value.trim();
+  if(!val) return;
+  const t = state[arr].find(t => t.id === taskId);
+  if(!t) return;
+  if(!t.subtasks) t.subtasks = [];
+  t.subtasks.push({ text: val, done: false });
+  save();
+  arr === 'daily' ? renderDaily() : renderMonthly();
+  // Re-focus input
+  setTimeout(() => {
+    const ni = document.getElementById(`subInput_${taskId}`);
+    if(ni) ni.focus();
+  }, 30);
+}
+
+function toggleSubtask(taskId, idx, arr) {
+  const t = state[arr].find(t => t.id === taskId);
+  if(!t || !t.subtasks) return;
+  t.subtasks[idx].done = !t.subtasks[idx].done;
+  // Auto-complete parent if all subtasks done
+  if(t.subtasks.length > 0 && t.subtasks.every(s => s.done)) t.done = true;
+  else if(t.done && t.subtasks.some(s => !s.done)) t.done = false;
+  save();
+  arr === 'daily' ? renderDaily() : renderMonthly();
+}
+
+function deleteSubtask(taskId, idx, arr) {
+  const t = state[arr].find(t => t.id === taskId);
+  if(!t || !t.subtasks) return;
+  t.subtasks.splice(idx, 1);
+  save();
+  arr === 'daily' ? renderDaily() : renderMonthly();
 }
 
 // ─── DRAG & DROP — DAILY ───
